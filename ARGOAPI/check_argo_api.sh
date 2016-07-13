@@ -95,7 +95,7 @@ day_end=$(date --utc --date="$CHECK_DAY" +"%Y-%m-%dT23:59:59Z")
 API_URL="$CHECK_URL?start_time=$day_start&end_time=$day_end&granularity=daily"
 
 STRING="availability"
-curlResult=`curl --connect-timeout 10 -X GET -H "Accept:application/json" -H "Content-Type:application/json" -H "x-api-key: $AUTH_TOKEN" $API_URL`
+curlResult=`curl --connect-timeout 10 -s  -X GET -H "Accept:application/json" -H "Content-Type:application/json" -H "x-api-key: $AUTH_TOKEN" $API_URL`
 
 if [ $DEBUG == "on"  ]
   then
