@@ -35,5 +35,5 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
-* Thu Mar 24 2016 Themis Zamani <themiszamani@gmail.com> - 0.1.1-1%{?dist}
+* Thu Aug 25 2016 Themis Zamani <themis@grnet.gr> - 0.1.0-1%{?dist}
 - ARGO WEB API probe: Check if api returns results.
