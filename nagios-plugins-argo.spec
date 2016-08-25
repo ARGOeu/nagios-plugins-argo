@@ -1,3 +1,5 @@
+%define dir %{_libdir}/nagios/plugins/argo
+
 Name: Nagios-plugins-argo
 Summary: ARGO components related probes.
 Version: 0.1.0
