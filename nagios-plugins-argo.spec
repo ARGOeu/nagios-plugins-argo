@@ -1,6 +1,3 @@
-#debuginfo not supported with Go
-%global debug_package %{nil}
-
 Name: Nagios-plugins-argo
 Summary: ARGO components related probes.
 Version: 0.1.0
