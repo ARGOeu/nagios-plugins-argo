@@ -11,7 +11,7 @@ from dateutil.parser import parse
 from NagiosResponse import NagiosResponse
 from refresh_token_expiration import timeout
 
-nagios = NagiosResponse("HTCondorCE certificate valid.")
+nagios = NagiosResponse()
 
 
 def validate_certificate(args):
@@ -27,19 +27,35 @@ def validate_certificate(args):
             OpenSSL.crypto.FILETYPE_PEM, cert
         )
         expiration_date = parse(x509.get_notAfter())
-        timedelta = expiration_date - datetime.datetime.now(tz=pytz.utc)
 
-        if 15 < timedelta.days < 30:
-            nagios.writeWarningMessage(
-                "HTCondorCE certificate expiring in %d days!" % timedelta.days
-            )
-            nagios.setCode(nagios.WARNING)
-
-        if timedelta.days < 15:
+        if x509.has_expired():
             nagios.writeCriticalMessage(
-                "HTCondorCE certificate expiring in %d days!" % timedelta.days
+                "HTCondorCE certificate expired (was valid until %s)!" %
+                expiration_date.strftime('%b %-d %H:%M:%S %Y %Z')
             )
             nagios.setCode(nagios.CRITICAL)
+
+        else:
+            timedelta = expiration_date - datetime.datetime.now(tz=pytz.utc)
+
+            if timedelta.days < 30:
+                nagios.writeWarningMessage(
+                    "HTCondorCE certificate will expire in %d day(s) on %s!" % (
+                        timedelta.days,
+                        expiration_date.strftime('%b %-d %H:%M:%S %Y %Z')
+                    )
+                )
+                nagios.setCode(nagios.WARNING)
+
+            else:
+                nagios.writeOkMessage(
+                    "HTCondorCE certificate valid until %s "
+                    "(expires in %d days)" % (
+                        expiration_date.strftime('%b %-d %H:%M:%S %Y %Z'),
+                        timedelta.days
+                    )
+                )
+                nagios.setCode(nagios.OK)
 
         print nagios.getMsg()
 
