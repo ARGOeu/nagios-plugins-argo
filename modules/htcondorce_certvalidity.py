@@ -2,6 +2,7 @@ import argparse
 import datetime
 import os
 import re
+import subprocess
 import sys
 
 import OpenSSL
@@ -53,7 +54,30 @@ def validate_certificate(args):
                         cn_ok = True
                         break
 
-        if cn_ok:
+        pem_filename = '/tmp/%s.pem' % args.hostname
+        with open(pem_filename, 'w') as f:
+            for line in cert:
+                f.write(line)
+
+        cmd = [
+            'openssl', 'verify', '-verbose', '-CAfile', args.ca_bundle,
+            pem_filename
+        ]
+        p = subprocess.Popen(
+            cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        p.communicate()[0].decode('utf-8').strip()
+        if os.path.isfile(pem_filename):
+            os.remove(pem_filename)
+
+        if p.returncode == 0:
+            ca_ok = True
+
+        else:
+            ca_ok = False
+
+        if cn_ok and ca_ok:
             if x509.has_expired():
                 nagios.writeCriticalMessage(
                     "HTCondorCE certificate expired (was valid until %s)!" %
@@ -85,9 +109,13 @@ def validate_certificate(args):
                     nagios.setCode(nagios.OK)
 
         else:
-            nagios.writeCriticalMessage(
-                'invalid CN (%s does not match %s)' % (args.hostname, cn)
-            )
+            if not cn_ok:
+                nagios.writeCriticalMessage(
+                    'invalid CN (%s does not match %s)' % (args.hostname, cn)
+                )
+
+            else:
+                nagios.writeCriticalMessage('invalid CA chain')
             nagios.setCode(nagios.CRITICAL)
 
         print nagios.getMsg()
@@ -117,6 +145,10 @@ def main():
     )
     parser.add_argument(
         "-t", "--timeout", dest="timeout", type=int, default=60, help="timeout"
+    )
+    parser.add_argument(
+        "--ca-bundle", dest="ca_bundle", type=str, required=True,
+        help="location of CA bundle"
     )
     args = parser.parse_args()
 
