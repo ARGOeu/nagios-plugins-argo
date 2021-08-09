@@ -4,7 +4,7 @@
 
 Name: nagios-plugins-argo
 Summary: ARGO components related probes.
-Version: 0.1.15
+Version: 0.1.16
 Release: 1%{?dist}
 License: ASL 2.0
 Source0: %{name}-%{version}.tar.gz
@@ -44,6 +44,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Mon Aug 9 2021 Katarina Zailac <kzailac@srce.hr> - 0.1.16-1%{?dist}
+- ARGO-3048 Create probe for certificate validity check for HTCondorCE
+- ARGO-3233 Change critical and warning intervals for htcondorce_certvalidity probe
+- ARGO-3234 Add checks on CN and CA for htcondorce_certvalidity probe
 * Wed Jun 2 2021 Katarina Zailac <kzailac@srce.hr> - 0.1.15-1%{?dist}
 - ARGO-3150 Add eduperson_entitlement scope to refresh_token
 * Mon Aug 31 2020 Katarina Zailac <kzailac@srce.hr> - 0.1.13-1%{?dist}
