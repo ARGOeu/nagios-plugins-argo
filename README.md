@@ -12,6 +12,7 @@ Currently, there are probes for:
 - POEM service
 - Compute Engine dataflow
 - Argo authentication service
+- HTCondorCE certificate check
 
 ## ARGO Messaging service
 
@@ -221,3 +222,18 @@ usage: check-refresh-token-expiration [-h] --token TOKEN [-t TIMEOUT]
 
 * `--token`: refresh token.
 * `-t`: probe timeout.
+
+
+## Check HTCondorCE certificate validity
+
+The probe is used to check validity of HTCondorCE certificate. 
+
+```shell
+usage: htcondorce-cert-check [-h] --user_proxy USER_PROXY -H HOSTNAME
+                             [-t TIMEOUT] --ca-bundle CA_BUNDLE
+```
+
+* `--user_proxy`: path to X509 user proxy,
+* `-H`: hostname,
+* `-t`: probe timeout,
+* `--ca-bundle`: location of CA bundle.
