@@ -16,14 +16,24 @@ from time import sleep
 HOSTCERT = "/etc/grid-security/hostcert.pem"
 HOSTKEY = "/etc/grid-security/hostkey.pem"
 CAPATH = "/etc/grid-security/certificates/"
+DEF_MAN_METRICS = ['argo.AMSPublisher-Check',
+'argo.OIDC.CheckRefreshTokenValidity', 
+'argo.OIDC.RefreshToken',
+'hr.srce.CertLifetime-Local',
+'org.nagios.AmsDirSize',
+'org.nagios.DiskCheck-Local',
+'org.nagios.NagiosCmdFile',
+'org.nagios.ProcessCrond']
 
 MIP_API = '/api/v2/metrics'
+TENANT_API = '/api/v2/internal/public_tenants/'
+METRICS_API = '/api/v2/internal/public_metric/'
 
-strerr = ''
-num_excp_expand = 0
+strerr = '' # Error message string
+num_excp_expand = 0 # Number of times the exception was expanded
 server_expire = None
 
-
+# Prints a message from exception
 def errmsg_from_excp(e):
     global strerr, num_excp_expand
     if isinstance(e, Exception) and getattr(e, 'args', False):
@@ -46,7 +56,7 @@ def errmsg_from_excp(e):
         if num_excp_expand <= 5:
             strerr += str(e) + ' '
 
-
+# Verifies server certificate
 def verify_servercert(host, timeout, capath):
     server_ctx = Context(TLSv1_METHOD)
     server_ctx.load_verify_locations(None, capath)
@@ -84,6 +94,7 @@ def verify_servercert(host, timeout, capath):
 
         global server_expire
         server_expire = server_cert_chain[-1].get_notAfter()
+        print(server_expire.decode('utf-8'))
 
     except PyOpenSSLError as e:
         raise e
@@ -96,58 +107,82 @@ def verify_servercert(host, timeout, capath):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-H', dest='hostname', required=True, type=str, help='hostname')
-    parser.add_argument('-r', dest='profile', required=True, type=str, help='profile name')
+    #parser.add_argument('-r', dest='profile', required=True, type=str, help='profile name')
     parser.add_argument('--cert', dest='cert', default=HOSTCERT, type=str, help='Certificate')
     parser.add_argument('--key', dest='key', default=HOSTKEY, type=str, help='Certificate key')
     parser.add_argument('--capath', dest='capath', default=CAPATH, type=str, help='CA directory')
-    parser.add_argument('--token', dest='token', required=True, type=str, help='API token')
-    parser.add_argument('-t', dest='timeout', required=True, type=int, default=180)
+    #parser.add_argument('--token', dest='token', required=True, type=str, help='API token')
+    parser.add_argument('-t', dest='timeout', type=int, default=180)
+    parser.add_argument('--mandatory-metrics', dest='manmetrics', default=DEF_MAN_METRICS,
+     type=str, nargs='*', help='mandatory metrics')
     arguments = parser.parse_args()
-
-    # verify server certificate
     try:
-        verify_servercert(arguments.hostname, arguments.timeout, arguments.capath)
-    except PyOpenSSLError as e:
-        print "CRITICAL - Server certificate verification failed: %s" % errmsg_from_excp(e)
-        raise SystemExit(2)
-    except socket.error as e:
-        print "CRITICAL - Connection error: %s" % errmsg_from_excp(e)
-        raise SystemExit(2)
-    except socket.timeout as e:
-        print "CRITICAL - Connection timeout after %s seconds" % arguments.timeout
-        raise SystemExit(2)
+        tenants = requests.get('https://poem.argo.grnet.gr/' + TENANT_API).json()
+        for tenant in tenants:
+            #print("Currently checking : " + tenant['name'])
 
-    # verify client certificate
-    try:
-        requests.get('https://' + arguments.hostname + '/poem/', cert=(arguments.cert, arguments.key), verify=True)
+            # verify server certificate
+            try:
+                verify_servercert(tenant['domain_url'], arguments.timeout, arguments.capath)
+            except PyOpenSSLError as e:
+                print('CRITICAL - Server certificate verification failed: %s' % errmsg_from_excp(e))
+                raise SystemExit(2)
+            except socket.error as e:
+                print('CRITICAL - Connection error: %s' % errmsg_from_excp(e))
+                raise SystemExit(2)
+            except socket.timeout as e:
+                print('CRITICAL - Connection timeout after %s seconds' % arguments.timeout)
+                raise SystemExit(2)
+
+
+            # verify client certificate
+            try:
+                requests.get('https://' + tenant['domain_url'] + '/poem/', cert=(arguments.cert, arguments.key), verify=True)
+            except requests.exceptions.RequestException as e:
+                print('CRITICAL - Client certificate verification failed: %s' % errmsg_from_excp(e))
+                raise SystemExit(2)
+
+
+            # Check certificate expire date
+            global server_expire
+            dte = datetime.datetime.strptime(server_expire.decode('utf-8'), '%Y%m%d%H%M%SZ')
+            dtn = datetime.datetime.now()
+            if (dte - dtn).days <= 15:
+                print('WARNING - Server certificate will expire in %i days' % (dte - dtn).days)
+                raise SystemExit(1)
+
+
+            # Check mandatory metrics
+            try:
+                metrics = requests.get('https://' + tenant['domain_url'] + METRICS_API).json()
+
+                missing_metrics = arguments.manmetrics.copy()
+                for metric in metrics:
+                    if metric['name'] in arguments.manmetrics:
+                        missing_metrics.remove(metric['name'])
+
+                for metric in missing_metrics:
+                    print('CRITICAL - Metric %s is not present in tenant %s' % (metric, tenant['name']))
+                    raise SystemExit(2)
+
+            except requests.exceptions.RequestException as e:
+                print('CRITICAL - cannot connect to %s: %s' % ('https://' + tenant['domain_url'] + METRICS_API,
+                                                            errmsg_from_excp(e)))
+                raise SystemExit(2)
+            except ValueError as e:
+                print('CRITICAL - %s - %s' % (METRICS_API, errmsg_from_excp(e)))
+                raise SystemExit(2)
+
+        raise SystemExit(0)
+
+
     except requests.exceptions.RequestException as e:
-        print "CRITICAL - Client certificate verification failed: %s" % errmsg_from_excp(e)
-        raise SystemExit(2)
-
-    try:
-        headers = {'x-api-key': arguments.token}
-        metrics = requests.get('https://' + arguments.hostname + MIP_API,
-                               headers=headers, cert=(arguments.cert,
-                                                      arguments.key),
-                               verify=True)
-        metrics.json()
-    except requests.exceptions.RequestException as e:
-        print 'CRITICAL - cannot connect to %s: %s' % ('https://' + arguments.hostname + MIP_API,
-                                                       errmsg_from_excp(e))
+        print('CRITICAL - cannot connect to %s: %s' % ('https://' + tenant['name'] + MIP_API,
+                                                    errmsg_from_excp(e)))
         raise SystemExit(2)
     except ValueError as e:
-        print 'CRITICAL - %s - %s' % (MIP_API, errmsg_from_excp(e))
+        print('CRITICAL - %s - %s' % (MIP_API, errmsg_from_excp(e)))
         raise SystemExit(2)
-
-    global server_expire
-    dte = datetime.datetime.strptime(server_expire, '%Y%m%d%H%M%SZ')
-    dtn = datetime.datetime.now()
-    if (dte - dtn).days <= 15:
-        print 'WARNING - Server certificate will expire in %i days' % (dte - dtn).days
-        raise SystemExit(1)
-
-    raise SystemExit(0)
 
 if __name__ == "__main__":
     main()
