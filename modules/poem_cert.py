@@ -13,43 +13,10 @@ import argparse
 import datetime
 import socket
 
+import utils
+from utils import errmsg_from_excp
+
 from time import sleep
-
-HOSTCERT = "/etc/grid-security/hostcert.pem"
-HOSTKEY = "/etc/grid-security/hostkey.pem"
-CAPATH = "/etc/grid-security/certificates/"
-
-MIP_API = '/api/v2/metrics'
-TENANT_API = '/api/v2/internal/public_tenants/'
-METRICS_API = '/api/v2/internal/public_metric/'
-
-SUPERPOEM = 'SuperPOEM Tenant'
-
-strerr = '' # Error message string
-num_excp_expand = 0
-server_expire = None
-# Prints a message from exception
-def errmsg_from_excp(e):
-    global strerr, num_excp_expand
-    if isinstance(e, Exception) and getattr(e, 'args', False):
-        num_excp_expand += 1
-        if not errmsg_from_excp(e.args):
-            return strerr
-    elif isinstance(e, dict):
-        for s in e.iteritems():
-            errmsg_from_excp(s)
-    elif isinstance(e, list):
-        for s in e:
-            errmsg_from_excp(s)
-    elif isinstance(e, tuple):
-        for s in e:
-            errmsg_from_excp(s)
-    elif isinstance(e, str):
-        if num_excp_expand <= 5:
-            strerr += e + ' '
-    elif isinstance(e, int):
-        if num_excp_expand <= 5:
-            strerr += str(e) + ' '
 
 # Verifies server certificate
 def verify_servercert(host, timeout, capath):
@@ -98,23 +65,12 @@ def verify_servercert(host, timeout, capath):
 
     return True
 
-# Removes element with name=name from json and returns updated json
-# If element doesn't exist the original json is returned
-def removeNameFromJSON(json, name):
-    for element in json:
-        if element['name'] == name:
-            el_for_removal = element
-            break
-    if el_for_removal != None:
-        json.remove(el_for_removal)
-    return json
-
 def main():
     parser = argparse.ArgumentParser()
     #parser.add_argument('-r', dest='profile', required=True, type=str, help='profile name')
-    parser.add_argument('--cert', dest='cert', default=HOSTCERT, type=str, help='Certificate')
-    parser.add_argument('--key', dest='key', default=HOSTKEY, type=str, help='Certificate key')
-    parser.add_argument('--capath', dest='capath', default=CAPATH, type=str, help='CA directory')
+    parser.add_argument('--cert', dest='cert', default=utils.HOSTCERT, type=str, help='Certificate')
+    parser.add_argument('--key', dest='key', default=utils.HOSTKEY, type=str, help='Certificate key')
+    parser.add_argument('--capath', dest='capath', default=utils.CAPATH, type=str, help='CA directory')
     #parser.add_argument('--token', dest='token', required=True, type=str, help='API token')
     parser.add_argument('-t', dest='timeout', type=int, default=180)
     arguments = parser.parse_args()
@@ -122,10 +78,10 @@ def main():
     nagiosResponse = NagiosResponse("All certificates are valid!")
 
     try:
-        tenants = requests.get('https://poem.argo.grnet.gr/' + TENANT_API).json()
-        tenants = removeNameFromJSON(tenants, SUPERPOEM)
+        tenants = requests.get('https://poem.argo.grnet.gr/' + utils.TENANT_API).json()
+        tenants = utils.removeNameFromJSON(tenants, utils.SUPERPOEM)
         for tenant in tenants:
-            #print("Currently checking : " + tenant['name'])
+            #print("Currently checking : " + tenant['name']) # HELP PRINT
 
             # verify server certificate
             try:
@@ -151,8 +107,7 @@ def main():
 
             # Check certificate expire date
             global server_expire
-            #dte = datetime.datetime.strptime(server_expire.decode('utf-8'), '%Y%m%d%H%M%SZ')
-            dte = datetime.datetime.strptime('20210904235959Z', '%Y%m%d%H%M%SZ') # FOR TESTING PURPOSES
+            dte = datetime.datetime.strptime(server_expire.decode('utf-8'), '%Y%m%d%H%M%SZ')
             dtn = datetime.datetime.now()
             if (dte - dtn).days <= 15:
                 nagiosResponse.setCode(nagiosResponse.WARNING)
@@ -160,12 +115,12 @@ def main():
 
     except requests.exceptions.RequestException as e:
         nagiosResponse.setCode(nagiosResponse.CRITICAL)
-        nagiosResponse.writeCriticalMessage('CRITICAL - cannot connect to %s: %s' % ('https://' + tenant['name'] + MIP_API,
+        nagiosResponse.writeCriticalMessage('CRITICAL - cannot connect to %s: %s' % ('https://' + tenant['name'] + utils.MIP_API,
                                                     errmsg_from_excp(e)))
 
     except ValueError as e:
         nagiosResponse.setCode(nagiosResponse.CRITICAL)
-        nagiosResponse.writeCriticalMessage('CRITICAL - %s - %s' % (MIP_API, errmsg_from_excp(e)))
+        nagiosResponse.writeCriticalMessage('CRITICAL - %s - %s' % (utils.MIP_API, errmsg_from_excp(e)))
 
     print(nagiosResponse.getMsg())
     raise SystemExit(nagiosResponse.getCode())
