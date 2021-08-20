@@ -5,6 +5,8 @@ from OpenSSL.SSL import VERIFY_PEER
 from OpenSSL.SSL import Error as PyOpenSSLError
 from OpenSSL.SSL import WantReadError as SSLWantReadError
 
+from NagiosResponse import NagiosResponse
+
 import requests
 import argparse
 
@@ -107,36 +109,7 @@ def removeNameFromJSON(json, name):
         json.remove(el_for_removal)
     return json
 
-def printMessages(warning, critical, unknown):
-    def printHelp(list, tag):
-        if len(list) > 0:
-            print(tag + ' - ', end="")
-            i = 0
-            for note in list:
-                print(note, end = "")
-                if(i < len(list) - 1):
-                    print(" / ", end='')
-                else:
-                    print()
-                i += 1
-            return False
-        return True
-    ok = True
-    if not printHelp(warning, 'Warning'):
-        ok = False
-    if not printHelp(critical, 'Critical'):
-        ok = False
-    if not printHelp(unknown, 'Unknown'):
-        ok = False
-    if ok:
-        print('OK')
-
-
 def main():
-    critical = [] # Lists for messages
-    warning = []
-    unknown = []
-
     parser = argparse.ArgumentParser()
     #parser.add_argument('-r', dest='profile', required=True, type=str, help='profile name')
     parser.add_argument('--cert', dest='cert', default=HOSTCERT, type=str, help='Certificate')
@@ -145,6 +118,9 @@ def main():
     #parser.add_argument('--token', dest='token', required=True, type=str, help='API token')
     parser.add_argument('-t', dest='timeout', type=int, default=180)
     arguments = parser.parse_args()
+
+    nagiosResponse = NagiosResponse("All certificates are valid!")
+
     try:
         tenants = requests.get('https://poem.argo.grnet.gr/' + TENANT_API).json()
         tenants = removeNameFromJSON(tenants, SUPERPOEM)
@@ -155,43 +131,44 @@ def main():
             try:
                 verify_servercert(tenant['domain_url'], arguments.timeout, arguments.capath)
             except PyOpenSSLError as e:
-                critical.append('Customer: ' + tenant['name'] + ' - Server certificate verification failed: %s' % errmsg_from_excp(e))
-                #raise SystemExit(2)
+                nagiosResponse.setCode(NagiosResponse.CRITICAL)
+                nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Server certificate verification failed: %s' % errmsg_from_excp(e))
             except socket.error as e:
-                critical.append('Customer: ' + tenant['name'] + ' - Connection error: %s' % errmsg_from_excp(e))
-                #raise SystemExit(2)
+                nagiosResponse.setCode(NagiosResponse.CRITICAL)
+                nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Connection error: %s' % errmsg_from_excp(e))
             except socket.timeout as e:
-                critical.append('Customer: ' + tenant['name'] + ' - Connection timeout after %s seconds' % arguments.timeout)
-                #raise SystemExit(2)
+                nagiosResponse.setCode(NagiosResponse.CRITICAL)
+                nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Connection timeout after %s seconds' % arguments.timeout)
 
 
             # verify client certificate
             try:
                 requests.get('https://' + tenant['domain_url'] + '/poem/', cert=(arguments.cert, arguments.key), verify=True)
             except requests.exceptions.RequestException as e:
-                critical.append('Customer: ' + tenant['name'] + ' - Client certificate verification failed: %s' % errmsg_from_excp(e))
-                #raise SystemExit(2)
+                nagiosResponse.setCode(NagiosResponse.CRITICAL)
+                nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Client certificate verification failed: %s' % errmsg_from_excp(e))
 
 
             # Check certificate expire date
             global server_expire
-            dte = datetime.datetime.strptime(server_expire.decode('utf-8'), '%Y%m%d%H%M%SZ')
+            #dte = datetime.datetime.strptime(server_expire.decode('utf-8'), '%Y%m%d%H%M%SZ')
+            dte = datetime.datetime.strptime('20210904235959Z', '%Y%m%d%H%M%SZ') # FOR TESTING PURPOSES
             dtn = datetime.datetime.now()
             if (dte - dtn).days <= 15:
-                warning.append('Customer: ' + tenant['name'] + ' - Server certificate will expire in %i days' % (dte - dtn).days)
-                #raise SystemExit(1)
-
-        printMessages(warning, critical, unknown)
-        raise SystemExit(0)
-
+                nagiosResponse.setCode(nagiosResponse.WARNING)
+                nagiosResponse.writeWarningMessage('Customer: ' + tenant['name'] + ' - Server certificate will expire in %i days' % (dte - dtn).days)
 
     except requests.exceptions.RequestException as e:
-        print('CRITICAL - cannot connect to %s: %s' % ('https://' + tenant['name'] + MIP_API,
+        nagiosResponse.setCode(nagiosResponse.CRITICAL)
+        nagiosResponse.writeCriticalMessage('CRITICAL - cannot connect to %s: %s' % ('https://' + tenant['name'] + MIP_API,
                                                     errmsg_from_excp(e)))
-        #raise SystemExit(2)
+
     except ValueError as e:
-        print('CRITICAL - %s - %s' % (MIP_API, errmsg_from_excp(e)))
-        #raise SystemExit(2)
+        nagiosResponse.setCode(nagiosResponse.CRITICAL)
+        nagiosResponse.writeCriticalMessage('CRITICAL - %s - %s' % (MIP_API, errmsg_from_excp(e)))
+
+    print(nagiosResponse.getMsg())
+    raise SystemExit(nagiosResponse.getCode())
 
 if __name__ == "__main__":
     main()

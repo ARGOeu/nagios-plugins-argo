@@ -2,6 +2,8 @@
 import requests
 import argparse
 
+from NagiosResponse import NagiosResponse
+
 from time import sleep
 
 DEF_MAN_METRICS = ['argo.AMSPublisher-Check', # Default mandatory metrics
@@ -44,31 +46,6 @@ def errmsg_from_excp(e):
             strerr += str(e) + ' '
 
 
-def printMessages(warning, critical, unknown):
-    def printHelp(list, tag):
-        if len(list) > 0:
-            print(tag + ' - ', end="")
-            i = 0
-            for note in list:
-                print(note, end = "")
-                if(i < len(list) - 1):
-                    print(" / ", end='')
-                else:
-                    print()
-                i += 1
-            return False
-        return True
-    ok = True
-    if not printHelp(warning, 'Warning'):
-        ok = False
-    if not printHelp(critical, 'Critical'):
-        ok = False
-    if printHelp(unknown, 'Unknown'):
-        ok = False
-    if ok:
-        print('OK')
-
-
 # Removes element with name=name from json and returns updated json
 # If element doesn't exist the original json is returned
 def removeNameFromJSON(json, name):
@@ -82,20 +59,20 @@ def removeNameFromJSON(json, name):
 
 
 def main():
-    critical = [] # Lists for messages
-    warning = []
-    unknown = []
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--mandatory-metrics', dest='manmetrics', default=DEF_MAN_METRICS,
      type=str, nargs='*', help='List of mandatory metrics seperated by space')
     arguments = parser.parse_args()
+
+    nagiosResponse = NagiosResponse("All mandatory metrics are present!")
+
     try:
         tenants = requests.get('https://poem.argo.grnet.gr/' + TENANT_API).json()
         tenants = removeNameFromJSON(tenants, SUPERPOEM)
+
         for tenant in tenants:
             #print("Currently checking : " + tenant['name'])
-            
+
             # Check mandatory metrics
             try:
                 metrics = requests.get('https://' + tenant['domain_url'] + METRICS_API).json()
@@ -106,30 +83,29 @@ def main():
                         missing_metrics.remove(metric['name'])
 
                 for metric in missing_metrics:
-                    critical.append('Customer: ' + tenant['name'] + ' - Metric %s is missing!' % metric)
-                    #raise SystemExit(2)
+                    nagiosResponse.setCode(nagiosResponse.CRITICAL)
+                    nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Metric %s is missing!' % metric)
 
             except requests.exceptions.RequestException as e:
-                critical.append('Customer: ' + tenant['name'] + ' - cannot connect to %s: %s' % ('https://' + tenant['domain_url'] + METRICS_API,
+                nagiosResponse.setCode(nagiosResponse.CRITICAL)
+                nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - cannot connect to %s: %s' % ('https://' + tenant['domain_url'] + METRICS_API,
                                                             errmsg_from_excp(e)))
-                #raise SystemExit(2)
             except ValueError as e:
-                critical.append('Customer: ' + tenant['name'] + ' - %s - %s' % (METRICS_API, errmsg_from_excp(e)))
-                #raise SystemExit(2)
-
-        printMessages(warning, critical, unknown)
-        raise SystemExit(0)
-
-
+                nagiosResponse.setCode(nagiosResponse.CRITICAL)
+                nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - %s - %s' % (METRICS_API, errmsg_from_excp(e)))
 
 
     except requests.exceptions.RequestException as e:
-        print('CRITICAL - cannot connect to %s: %s' % ('https://' + tenant['name'] + TENANT_API,
+        nagiosResponse.setCode(nagiosResponse.CRITICAL)
+        nagiosResponse.writeCriticalMessage('Critical - cannot connect to %s: %s' % ('https://' + tenant['name'] + TENANT_API,
                                                     errmsg_from_excp(e)))
-        #raise SystemExit(2)
     except ValueError as e:
-        print('CRITICAL - %s - %s' % (TENANT_API, errmsg_from_excp(e)))
-        #raise SystemExit(2)
+        nagiosResponse.setCode(nagiosResponse.CRITICAL)
+        nagiosResponse.writeCriticalMessage('Critical - %s - %s' % (TENANT_API, errmsg_from_excp(e)))
+
+
+    print(nagiosResponse.getMsg())
+    raise SystemExit(nagiosResponse.getCode())
 
 if __name__ == "__main__":
     main()
