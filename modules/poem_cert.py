@@ -21,6 +21,8 @@ MIP_API = '/api/v2/metrics'
 TENANT_API = '/api/v2/internal/public_tenants/'
 METRICS_API = '/api/v2/internal/public_metric/'
 
+SUPERPOEM = 'SuperPOEM Tenant'
+
 strerr = '' # Error message string
 num_excp_expand = 0
 server_expire = None
@@ -94,6 +96,17 @@ def verify_servercert(host, timeout, capath):
 
     return True
 
+# Removes element with name=name from json and returns updated json
+# If element doesn't exist the original json is returned
+def removeNameFromJSON(json, name):
+    for element in json:
+        if element['name'] == name:
+            el_for_removal = element
+            break
+    if el_for_removal != None:
+        json.remove(el_for_removal)
+    return json
+
 def printMessages(warning, critical, unknown):
     def printHelp(list, tag):
         if len(list) > 0:
@@ -113,7 +126,7 @@ def printMessages(warning, critical, unknown):
         ok = False
     if not printHelp(critical, 'Critical'):
         ok = False
-    if printHelp(unknown, 'Unknown'):
+    if not printHelp(unknown, 'Unknown'):
         ok = False
     if ok:
         print('OK')
@@ -134,6 +147,7 @@ def main():
     arguments = parser.parse_args()
     try:
         tenants = requests.get('https://poem.argo.grnet.gr/' + TENANT_API).json()
+        tenants = removeNameFromJSON(tenants, SUPERPOEM)
         for tenant in tenants:
             #print("Currently checking : " + tenant['name'])
 

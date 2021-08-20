@@ -1,15 +1,6 @@
 #!/usr/bin/env python
-
-from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
-from OpenSSL.SSL import VERIFY_PEER
-from OpenSSL.SSL import Error as PyOpenSSLError
-from OpenSSL.SSL import WantReadError as SSLWantReadError
-
 import requests
 import argparse
-
-import datetime
-import socket
 
 from time import sleep
 
@@ -24,6 +15,7 @@ DEF_MAN_METRICS = ['argo.AMSPublisher-Check', # Default mandatory metrics
 
 TENANT_API = '/api/v2/internal/public_tenants/'
 METRICS_API = '/api/v2/internal/public_metric/'
+SUPERPOEM = 'SuperPOEM Tenant'
 
 strerr = '' # Error message string
 num_excp_expand = 0
@@ -77,6 +69,18 @@ def printMessages(warning, critical, unknown):
         print('OK')
 
 
+# Removes element with name=name from json and returns updated json
+# If element doesn't exist the original json is returned
+def removeNameFromJSON(json, name):
+    for element in json:
+        if element['name'] == name:
+            el_for_removal = element
+            break
+    if el_for_removal != None:
+        json.remove(el_for_removal)
+    return json   
+
+
 def main():
     critical = [] # Lists for messages
     warning = []
@@ -88,8 +92,10 @@ def main():
     arguments = parser.parse_args()
     try:
         tenants = requests.get('https://poem.argo.grnet.gr/' + TENANT_API).json()
+        tenants = removeNameFromJSON(tenants, SUPERPOEM)
         for tenant in tenants:
-
+            #print("Currently checking : " + tenant['name'])
+            
             # Check mandatory metrics
             try:
                 metrics = requests.get('https://' + tenant['domain_url'] + METRICS_API).json()
