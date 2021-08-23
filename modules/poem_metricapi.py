@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import requests
 import argparse
 
@@ -25,8 +24,8 @@ def main():
     nagiosResponse = NagiosResponse("All mandatory metrics are present!")
 
     try:
-        tenants = requests.get('https://poem.argo.grnet.gr/' + utils.TENANT_API).json()
-        tenants = utils.removeNameFromJSON(tenants, utils.SUPERPOEM)
+        tenants = requests.get('https://' + utils.MAIN_ADDRESS + utils.TENANT_API).json()
+        #tenants = utils.removeNameFromJSON(tenants, utils.SUPERPOEM)
 
         for tenant in tenants:
             #print("Currently checking : " + tenant['name']) # HELP PRINT
@@ -34,7 +33,7 @@ def main():
             # Check mandatory metrics
             try:
                 metrics = requests.get('https://' + tenant['domain_url'] + utils.METRICS_API).json()
-
+                
                 missing_metrics = arguments.manmetrics.copy()
                 for metric in metrics:
                     if metric['name'] in arguments.manmetrics:
@@ -55,12 +54,11 @@ def main():
 
     except requests.exceptions.RequestException as e:
         nagiosResponse.setCode(nagiosResponse.CRITICAL)
-        nagiosResponse.writeCriticalMessage('Critical - cannot connect to %s: %s' % ('https://' + tenant['name'] + utils.TENANT_API,
+        nagiosResponse.writeCriticalMessage('Critical - cannot connect to %s: %s' % ('https://' + utils.MAIN_ADDRESS + utils.TENANT_API,
                                                     errmsg_from_excp(e)))
     except ValueError as e:
         nagiosResponse.setCode(nagiosResponse.CRITICAL)
         nagiosResponse.writeCriticalMessage('Critical - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
-
 
     print(nagiosResponse.getMsg())
     raise SystemExit(nagiosResponse.getCode())

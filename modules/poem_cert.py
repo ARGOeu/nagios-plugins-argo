@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
 from OpenSSL.SSL import VERIFY_PEER
 from OpenSSL.SSL import Error as PyOpenSSLError
@@ -67,19 +65,18 @@ def verify_servercert(host, timeout, capath):
 
 def main():
     parser = argparse.ArgumentParser()
-    #parser.add_argument('-r', dest='profile', required=True, type=str, help='profile name')
     parser.add_argument('--cert', dest='cert', default=utils.HOSTCERT, type=str, help='Certificate')
     parser.add_argument('--key', dest='key', default=utils.HOSTKEY, type=str, help='Certificate key')
     parser.add_argument('--capath', dest='capath', default=utils.CAPATH, type=str, help='CA directory')
-    #parser.add_argument('--token', dest='token', required=True, type=str, help='API token')
     parser.add_argument('-t', dest='timeout', type=int, default=180)
     arguments = parser.parse_args()
 
     nagiosResponse = NagiosResponse("All certificates are valid!")
 
     try:
-        tenants = requests.get('https://poem.argo.grnet.gr/' + utils.TENANT_API).json()
+        tenants = requests.get('https://' + utils.MAIN_ADDRESS + utils.TENANT_API).json()
         tenants = utils.removeNameFromJSON(tenants, utils.SUPERPOEM)
+
         for tenant in tenants:
             #print("Currently checking : " + tenant['name']) # HELP PRINT
 
@@ -115,12 +112,12 @@ def main():
 
     except requests.exceptions.RequestException as e:
         nagiosResponse.setCode(nagiosResponse.CRITICAL)
-        nagiosResponse.writeCriticalMessage('CRITICAL - cannot connect to %s: %s' % ('https://' + tenant['name'] + utils.MIP_API,
+        nagiosResponse.writeCriticalMessage('CRITICAL - cannot connect to %s: %s' % ('https://' + utils.MAIN_ADDRESS + utils.TENANT_API,
                                                     errmsg_from_excp(e)))
 
     except ValueError as e:
         nagiosResponse.setCode(nagiosResponse.CRITICAL)
-        nagiosResponse.writeCriticalMessage('CRITICAL - %s - %s' % (utils.MIP_API, errmsg_from_excp(e)))
+        nagiosResponse.writeCriticalMessage('CRITICAL - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
 
     print(nagiosResponse.getMsg())
     raise SystemExit(nagiosResponse.getCode())
