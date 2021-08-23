@@ -16,6 +16,10 @@ from utils import errmsg_from_excp
 
 from time import sleep
 
+HOSTCERT = "/etc/grid-security/hostcert.pem"
+HOSTKEY = "/etc/grid-security/hostkey.pem"
+CAPATH = "/etc/grid-security/certificates/"
+
 # Verifies server certificate
 def verify_servercert(host, timeout, capath):
     server_ctx = Context(TLSv1_METHOD)
@@ -65,9 +69,9 @@ def verify_servercert(host, timeout, capath):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cert', dest='cert', default=utils.HOSTCERT, type=str, help='Certificate')
-    parser.add_argument('--key', dest='key', default=utils.HOSTKEY, type=str, help='Certificate key')
-    parser.add_argument('--capath', dest='capath', default=utils.CAPATH, type=str, help='CA directory')
+    parser.add_argument('--cert', dest='cert', default=HOSTCERT, type=str, help='Certificate')
+    parser.add_argument('--key', dest='key', default=HOSTKEY, type=str, help='Certificate key')
+    parser.add_argument('--capath', dest='capath', default=CAPATH, type=str, help='CA directory')
     parser.add_argument('-t', dest='timeout', type=int, default=180)
     arguments = parser.parse_args()
 
