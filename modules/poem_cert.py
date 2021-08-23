@@ -35,7 +35,6 @@ def verify_servercert(host, timeout, capath):
     sock.setblocking(1)
     sock.settimeout(timeout)
     sock.connect((host, 443))
-
     server_conn = Connection(server_ctx, sock)
     server_conn.set_connect_state()
 
@@ -96,6 +95,8 @@ def main():
             except socket.timeout as e:
                 nagiosResponse.setCode(NagiosResponse.CRITICAL)
                 nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Connection timeout after %s seconds' % arguments.timeout)
+            except Exception:
+                nagiosResponse.setCode(NagiosResponse.UNKNOWN)
 
 
             # verify client certificate
@@ -104,11 +105,13 @@ def main():
             except requests.exceptions.RequestException as e:
                 nagiosResponse.setCode(NagiosResponse.CRITICAL)
                 nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Client certificate verification failed: %s' % errmsg_from_excp(e))
-
+            except Exception:
+                nagiosResponse.setCode(NagiosResponse.UNKNOWN)
 
             # Check certificate expire date
             global server_expire
             dte = datetime.datetime.strptime(server_expire.decode('utf-8'), '%Y%m%d%H%M%SZ')
+            #dte = datetime.datetime.strptime('20210825235959Z', '%Y%m%d%H%M%SZ')
             dtn = datetime.datetime.now()
             if (dte - dtn).days <= 15:
                 nagiosResponse.setCode(nagiosResponse.WARNING)
@@ -122,6 +125,9 @@ def main():
     except ValueError as e:
         nagiosResponse.setCode(nagiosResponse.CRITICAL)
         nagiosResponse.writeCriticalMessage('CRITICAL - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
+
+    except Exception:
+        nagiosResponse.setCode(NagiosResponse.UNKNOWN)
 
     print(nagiosResponse.getMsg())
     raise SystemExit(nagiosResponse.getCode())

@@ -25,7 +25,7 @@ def main():
 
     try:
         tenants = requests.get('https://' + utils.MAIN_ADDRESS + utils.TENANT_API).json()
-        #tenants = utils.removeNameFromJSON(tenants, utils.SUPERPOEM)
+        tenants = utils.removeNameFromJSON(tenants, utils.SUPERPOEM)
 
         for tenant in tenants:
             #print("Currently checking : " + tenant['name']) # HELP PRINT
@@ -33,7 +33,7 @@ def main():
             # Check mandatory metrics
             try:
                 metrics = requests.get('https://' + tenant['domain_url'] + utils.METRICS_API).json()
-                
+
                 missing_metrics = arguments.manmetrics.copy()
                 for metric in metrics:
                     if metric['name'] in arguments.manmetrics:
@@ -51,6 +51,8 @@ def main():
                 nagiosResponse.setCode(nagiosResponse.CRITICAL)
                 nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - %s - %s' % (utils.METRICS_API, errmsg_from_excp(e)))
 
+            except Exception:
+                nagiosResponse.setCode(NagiosResponse.UNKNOWN)
 
     except requests.exceptions.RequestException as e:
         nagiosResponse.setCode(nagiosResponse.CRITICAL)
@@ -59,6 +61,9 @@ def main():
     except ValueError as e:
         nagiosResponse.setCode(nagiosResponse.CRITICAL)
         nagiosResponse.writeCriticalMessage('Critical - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
+
+    except Exception:
+        nagiosResponse.setCode(NagiosResponse.UNKNOWN)
 
     print(nagiosResponse.getMsg())
     raise SystemExit(nagiosResponse.getCode())
