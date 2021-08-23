@@ -114,11 +114,21 @@ The usage of the script for poem_cert is:
 $ usage: poem_cert.py [-h] [--cert CERT] [--key KEY] [--capath CAPATH]
                     [-t TIMEOUT]
 ```
+where:
+
+ - (--cert): Path to host certificate
+ - (--key): Path to host key
+ - (--capath): CAPATH
+ - (-t): the timeout
+
 The usage of the script for poem_metricapi is:
 ```sh
 $ usage: poem_metricapi.py [-h]
                          [--mandatory-metrics [MANMETRICS [MANMETRICS ...]]]
 ```
+where:
+
+ - (--mandatory-metrics): List of mandatory metrics seperated by space
 ### Usage examples
 ```sh
 $ ./poem_cert --cert /security/certificate.pem --key security/key.pem --capath security/certificates -t 180
