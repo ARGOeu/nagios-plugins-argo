@@ -107,7 +107,7 @@ $ ./web-api -H web-api.test.com --tenant tenantname --rtype ar --token 123213123
 ```
 
 ## POEM Service
-This is a probe for checking if tenant certificates are valid, and if tenants contain mandatory metrics. The proba acutally consists of two probes, probe_cert which check if the certificates are valid, and probe_metricapi which checks if tenants contain the mandatory metrics.
+This is a probe for checking if tenant certificates are valid, and if tenants contain mandatory metrics. The probe acutally consists of two probes, probe_cert which checks if the certificates are valid, and probe_metricapi which checks if tenants contain the mandatory metrics.
 
 The usage of the script for poem_cert is:
 ```sh
