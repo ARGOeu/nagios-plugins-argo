@@ -96,7 +96,8 @@ def main():
                 nagiosResponse.setCode(NagiosResponse.CRITICAL)
                 nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Connection timeout after %s seconds' % arguments.timeout)
             except Exception:
-                nagiosResponse.setCode(NagiosResponse.UNKNOWN)
+                nagiosResponse.setCode(nagiosResponse.CRITICAL)
+                nagiosResponse.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
 
 
             # verify client certificate
@@ -106,7 +107,8 @@ def main():
                 nagiosResponse.setCode(NagiosResponse.CRITICAL)
                 nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Client certificate verification failed: %s' % errmsg_from_excp(e))
             except Exception:
-                nagiosResponse.setCode(NagiosResponse.UNKNOWN)
+                nagiosResponse.setCode(nagiosResponse.CRITICAL)
+                nagiosResponse.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
 
             # Check certificate expire date
             global server_expire
@@ -127,7 +129,8 @@ def main():
         nagiosResponse.writeCriticalMessage('CRITICAL - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
 
     except Exception:
-        nagiosResponse.setCode(NagiosResponse.UNKNOWN)
+        nagiosResponse.setCode(nagiosResponse.CRITICAL)
+        nagiosResponse.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
 
     print(nagiosResponse.getMsg())
     raise SystemExit(nagiosResponse.getCode())

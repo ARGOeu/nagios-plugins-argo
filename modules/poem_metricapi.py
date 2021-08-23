@@ -52,7 +52,8 @@ def main():
                 nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - %s - %s' % (utils.METRICS_API, errmsg_from_excp(e)))
 
             except Exception:
-                nagiosResponse.setCode(NagiosResponse.UNKNOWN)
+                nagiosResponse.setCode(nagiosResponse.CRITICAL)
+                nagiosResponse.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
 
     except requests.exceptions.RequestException as e:
         nagiosResponse.setCode(nagiosResponse.CRITICAL)
@@ -63,7 +64,8 @@ def main():
         nagiosResponse.writeCriticalMessage('Critical - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
 
     except Exception:
-        nagiosResponse.setCode(NagiosResponse.UNKNOWN)
+        nagiosResponse.setCode(nagiosResponse.CRITICAL)
+        nagiosResponse.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
 
     print(nagiosResponse.getMsg())
     raise SystemExit(nagiosResponse.getCode())
