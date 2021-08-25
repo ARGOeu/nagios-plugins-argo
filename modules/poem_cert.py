@@ -117,8 +117,8 @@ def main():
             # Check if certificate CN matches host name
             global server_subject
             if server_subject.CN != tenant['domain_url']:
-                nagios_response.setCode(NagiosResponse.WARNING)
-                nagios_response.writeWarningMessage('Server certificate CN does not match %s' % tenant['domain_url'])
+                nagios_response.setCode(NagiosResponse.CRITICAL)
+                nagios_response.writeCriticalMessage('Server certificate CN does not match %s' % tenant['domain_url'])
 
             # Check certificate expire date
             global server_expire
