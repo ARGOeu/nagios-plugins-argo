@@ -55,6 +55,10 @@ def verify_servercert(host, timeout, capath):
             if iosock_try():
                 break
 
+
+        global server_subject
+        server_subject = server_cert_chain[-1].get_subject()
+
         global server_expire
         server_expire = server_cert_chain[-1].get_notAfter()
 
@@ -74,11 +78,11 @@ def main():
     parser.add_argument('-t', dest='timeout', type=int, default=180)
     arguments = parser.parse_args()
 
-    nagiosResponse = NagiosResponse("All certificates are valid!")
+    nagios_response = NagiosResponse("All certificates are valid!")
 
     try:
         tenants = requests.get('https://' + utils.MAIN_ADDRESS + utils.TENANT_API).json()
-        tenants = utils.removeNameFromJSON(tenants, utils.SUPERPOEM)
+        tenants = utils.remove_name_from_json(tenants, utils.SUPERPOEM)
 
         for tenant in tenants:
             #print("Currently checking : " + tenant['name']) # HELP PRINT
@@ -87,53 +91,58 @@ def main():
             try:
                 verify_servercert(tenant['domain_url'], arguments.timeout, arguments.capath)
             except PyOpenSSLError as e:
-                nagiosResponse.setCode(NagiosResponse.CRITICAL)
-                nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Server certificate verification failed: %s' % errmsg_from_excp(e))
+                nagios_response.setCode(NagiosResponse.CRITICAL)
+                nagios_response.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Server certificate verification failed: %s' % errmsg_from_excp(e))
             except socket.error as e:
-                nagiosResponse.setCode(NagiosResponse.CRITICAL)
-                nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Connection error: %s' % errmsg_from_excp(e))
+                nagios_response.setCode(NagiosResponse.CRITICAL)
+                nagios_response.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Connection error: %s' % errmsg_from_excp(e))
             except socket.timeout as e:
-                nagiosResponse.setCode(NagiosResponse.CRITICAL)
-                nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Connection timeout after %s seconds' % arguments.timeout)
+                nagios_response.setCode(NagiosResponse.CRITICAL)
+                nagios_response.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Connection timeout after %s seconds' % arguments.timeout)
             except Exception:
-                nagiosResponse.setCode(nagiosResponse.CRITICAL)
-                nagiosResponse.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
+                nagios_response.setCode(NagiosResponse.CRITICAL)
+                nagios_response.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
 
 
             # verify client certificate
             try:
                 requests.get('https://' + tenant['domain_url'] + '/poem/', cert=(arguments.cert, arguments.key), verify=True)
             except requests.exceptions.RequestException as e:
-                nagiosResponse.setCode(NagiosResponse.CRITICAL)
-                nagiosResponse.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Client certificate verification failed: %s' % errmsg_from_excp(e))
+                nagios_response.setCode(NagiosResponse.CRITICAL)
+                nagios_response.writeCriticalMessage('Customer: ' + tenant['name'] + ' - Client certificate verification failed: %s' % errmsg_from_excp(e))
             except Exception:
-                nagiosResponse.setCode(nagiosResponse.CRITICAL)
-                nagiosResponse.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
+                nagios_response.setCode(NagiosResponse.CRITICAL)
+                nagios_response.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
+
+            # Check if certificate CN matches host name
+            global server_subject
+            if server_subject.CN != tenant['domain_url']:
+                nagios_response.setCode(NagiosResponse.WARNING)
+                nagios_response.writeWarningMessage('Server certificate CN does not match %s' % tenant['domain_url'])
 
             # Check certificate expire date
             global server_expire
             dte = datetime.datetime.strptime(server_expire.decode('utf-8'), '%Y%m%d%H%M%SZ')
-            #dte = datetime.datetime.strptime('20210825235959Z', '%Y%m%d%H%M%SZ')
             dtn = datetime.datetime.now()
             if (dte - dtn).days <= 15:
-                nagiosResponse.setCode(nagiosResponse.WARNING)
-                nagiosResponse.writeWarningMessage('Customer: ' + tenant['name'] + ' - Server certificate will expire in %i days' % (dte - dtn).days)
+                nagios_response.setCode(NagiosResponse.WARNING)
+                nagios_response.writeWarningMessage('Customer: ' + tenant['name'] + ' - Server certificate will expire in %i days' % (dte - dtn).days)
 
     except requests.exceptions.RequestException as e:
-        nagiosResponse.setCode(nagiosResponse.CRITICAL)
-        nagiosResponse.writeCriticalMessage('CRITICAL - cannot connect to %s: %s' % ('https://' + utils.MAIN_ADDRESS + utils.TENANT_API,
+        nagios_response.setCode(NagiosResponse.CRITICAL)
+        nagios_response.writeCriticalMessage('CRITICAL - cannot connect to %s: %s' % ('https://' + utils.MAIN_ADDRESS + utils.TENANT_API,
                                                     errmsg_from_excp(e)))
 
     except ValueError as e:
-        nagiosResponse.setCode(nagiosResponse.CRITICAL)
-        nagiosResponse.writeCriticalMessage('CRITICAL - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
+        nagios_response.setCode(NagiosResponse.CRITICAL)
+        nagios_response.writeCriticalMessage('CRITICAL - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
 
     except Exception:
-        nagiosResponse.setCode(nagiosResponse.CRITICAL)
-        nagiosResponse.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
+        nagios_response.setCode(NagiosResponse.CRITICAL)
+        nagios_response.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
 
-    print(nagiosResponse.getMsg())
-    raise SystemExit(nagiosResponse.getCode())
+    print(nagios_response.getMsg())
+    raise SystemExit(nagios_response.getCode())
 
 if __name__ == "__main__":
     main()

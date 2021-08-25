@@ -34,7 +34,7 @@ def errmsg_from_excp(e):
 
 # Removes first element with name=name from json and returns updated json
 # If element doesn't exist the original json is returned
-def removeNameFromJSON(json, name):
+def remove_name_from_json(json, name):
     for element in json:
         if element['name'] == name:
             el_for_removal = element
