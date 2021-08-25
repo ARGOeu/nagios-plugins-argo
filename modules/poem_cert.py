@@ -2,7 +2,8 @@ from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
 from OpenSSL.SSL import VERIFY_PEER
 from OpenSSL.SSL import Error as PyOpenSSLError
 from OpenSSL.SSL import WantReadError as SSLWantReadError
-
+import OpenSSL.SSL
+import ssl
 from NagiosResponse import NagiosResponse
 
 import requests
@@ -36,6 +37,7 @@ def verify_servercert(host, timeout, capath):
     sock.settimeout(timeout)
     sock.connect((host, 443))
     server_conn = Connection(server_ctx, sock)
+    server_conn.set_tlsext_host_name(host.encode('utf-8'))
     server_conn.set_connect_state()
 
     def iosock_try():
@@ -54,10 +56,15 @@ def verify_servercert(host, timeout, capath):
         while True:
             if iosock_try():
                 break
+            
+        global server_subject_alt_names 
+        server_subject_alt_names=""
+        for i in range(0, server_cert_chain[-1].get_extension_count()):
+            extension = server_cert_chain[-1].get_extension(i)
+            if extension.get_short_name().decode('utf-8') == 'subjectAltName':
+                server_subject_alt_names = str(extension)
+                break
 
-
-        global server_subject
-        server_subject = server_cert_chain[-1].get_subject()
 
         global server_expire
         server_expire = server_cert_chain[-1].get_notAfter()
@@ -69,6 +76,30 @@ def verify_servercert(host, timeout, capath):
         server_conn.close()
 
     return True
+
+# Transforms the string value of X509Extension object to list of alt names
+def alt_names_string_to_list(string_alt_names):
+    list_alt_names = string_alt_names.split(", ")
+    temp_list = []
+    for x in list_alt_names:
+        temp_list.append(x[4:])
+    return temp_list
+
+# Checks if certificate CN covers FQDN
+def check_CN_matches_FQDN(list_alt_names, fqdn):
+    ok = False
+    for alt_name in list_alt_names:
+        if len(alt_name) > 0:
+            if alt_name[0] == '*':
+                clean_alt_name = alt_name[1:]
+                if fqdn.endswith(clean_alt_name):
+                    ok = True
+                    break
+            else:
+                if alt_name == fqdn:
+                    ok = True
+                    break
+    return ok
 
 def main():
     parser = argparse.ArgumentParser()
@@ -115,8 +146,10 @@ def main():
                 nagios_response.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
 
             # Check if certificate CN matches host name
-            global server_subject
-            if server_subject.CN != tenant['domain_url']:
+            global server_subject_alt_names
+            alt_names_list = alt_names_string_to_list(server_subject_alt_names)
+
+            if not check_CN_matches_FQDN(alt_names_list, tenant['domain_url']):
                 nagios_response.setCode(NagiosResponse.CRITICAL)
                 nagios_response.writeCriticalMessage('Server certificate CN does not match %s' % tenant['domain_url'])
 
