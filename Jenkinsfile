@@ -4,6 +4,7 @@ pipeline {
         checkoutToSubdirectory('nagios-plugins-argo')
     }
     environment {
+        TEST_VAR='test'
         PROJECT_DIR="nagios-plugins-argo"
         GIT_COMMIT=sh(script: "cd ${WORKSPACE}/$PROJECT_DIR && git log -1 --format=\"%H\"",returnStdout: true).trim()
         GIT_COMMIT_HASH=sh(script: "cd ${WORKSPACE}/$PROJECT_DIR && git log -1 --format=\"%H\" | cut -c1-7",returnStdout: true).trim()
