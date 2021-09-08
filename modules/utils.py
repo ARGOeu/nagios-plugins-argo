@@ -2,7 +2,6 @@
 MIP_API = '/api/v2/metrics'
 TENANT_API = '/api/v2/internal/public_tenants/'
 METRICS_API = '/api/v2/internal/public_metric/'
-MAIN_ADDRESS = 'poem.argo.grnet.gr/'
 
 SUPERPOEM = 'SuperPOEM Tenant'
 

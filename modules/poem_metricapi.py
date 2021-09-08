@@ -50,7 +50,7 @@ def main():
 
     except requests.exceptions.RequestException as e:
         nagios_response.setCode(NagiosResponse.CRITICAL)
-        nagios_response.writeCriticalMessage('Critical - cannot connect to %s: %s' % ('https://' + utils.MAIN_ADDRESS + utils.TENANT_API,
+        nagios_response.writeCriticalMessage('Critical - cannot connect to %s: %s' % ('https://' + arguments.hostname + utils.TENANT_API,
                                                     errmsg_from_excp(e)))
     except ValueError as e:
         nagios_response.setCode(NagiosResponse.CRITICAL)
