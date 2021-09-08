@@ -27,7 +27,7 @@ def main():
             try:
                 metrics = requests.get('https://' + tenant['domain_url'] + utils.METRICS_API, timeout=arguments.timeout).json()
 
-                missing_metrics = arguments.mandatory_metrics.copy()
+                missing_metrics = list(arguments.mandatory_metrics)
                 for metric in metrics:
                     if metric['name'] in arguments.mandatory_metrics:
                         missing_metrics.remove(metric['name'])
