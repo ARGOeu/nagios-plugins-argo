@@ -103,6 +103,7 @@ def check_CN_matches_FQDN(list_alt_names, fqdn):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-H', dest='hostname', required=True, type=str, help='hostname')
     parser.add_argument('--cert', dest='cert', default=HOSTCERT, type=str, help='Certificate')
     parser.add_argument('--key', dest='key', default=HOSTKEY, type=str, help='Certificate key')
     parser.add_argument('--capath', dest='capath', default=CAPATH, type=str, help='CA directory')
@@ -112,7 +113,7 @@ def main():
     nagios_response = NagiosResponse("All certificates are valid!")
 
     try:
-        tenants = requests.get('https://' + utils.MAIN_ADDRESS + utils.TENANT_API).json()
+        tenants = requests.get('https://' + arguments.hostname + utils.TENANT_API).json()
         tenants = utils.remove_name_from_json(tenants, utils.SUPERPOEM)
 
         for tenant in tenants:

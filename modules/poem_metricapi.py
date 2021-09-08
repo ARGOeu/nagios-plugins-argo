@@ -1,13 +1,14 @@
 import requests
 import argparse
 
-from NagiosResponse import NagiosResponse
+from nagios_plugins_argo.NagiosResponse import NagiosResponse
 
-import utils
-from utils import errmsg_from_excp
+from nagios_plugins_argo import utils
+from nagios_plugins_argo.utils import errmsg_from_excp
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-H', dest='hostname', required=True, type=str, help='Super POEM FQDN')
     parser.add_argument('--mandatory-metrics', dest='mandatory_metrics', required=True,
      type=str, nargs='*', help='List of mandatory metrics seperated by space')
     arguments = parser.parse_args()
@@ -15,7 +16,7 @@ def main():
     nagios_response = NagiosResponse("All mandatory metrics are present!")
 
     try:
-        tenants = requests.get('https://' + utils.MAIN_ADDRESS + utils.TENANT_API).json()
+        tenants = requests.get('https://' + arguments.hostname + utils.TENANT_API).json()
         tenants = utils.remove_name_from_json(tenants, utils.SUPERPOEM)
 
         for tenant in tenants:
