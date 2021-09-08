@@ -56,7 +56,7 @@ def main():
         nagios_response.setCode(NagiosResponse.CRITICAL)
         nagios_response.writeCriticalMessage('Critical - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
 
-    except Exception:
+    except Exception as e:
         nagios_response.setCode(NagiosResponse.CRITICAL)
         nagios_response.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
 
