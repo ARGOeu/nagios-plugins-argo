@@ -21,8 +21,6 @@ def main():
         tenants = utils.remove_name_from_json(tenants, utils.SUPERPOEM)
 
         for tenant in tenants:
-            #print("Currently checking : " + tenant['name']) # HELP PRINT
-
             # Check mandatory metrics
             try:
                 metrics = requests.get('https://' + tenant['domain_url'] + utils.METRICS_API, timeout=arguments.timeout).json()
