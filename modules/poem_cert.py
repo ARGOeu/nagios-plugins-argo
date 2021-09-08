@@ -4,7 +4,7 @@ from OpenSSL.SSL import Error as PyOpenSSLError
 from OpenSSL.SSL import WantReadError as SSLWantReadError
 import OpenSSL.SSL
 import ssl
-from NagiosResponse import NagiosResponse
+from nagios_plugins_argo.NagiosResponse import NagiosResponse
 
 import requests
 import argparse
@@ -12,8 +12,8 @@ import argparse
 import datetime
 import socket
 
-import utils
-from utils import errmsg_from_excp
+from nagios_plugins_argo import utils
+from nagios_plugins_argo.utils import errmsg_from_excp
 
 from time import sleep
 
@@ -56,8 +56,8 @@ def verify_servercert(host, timeout, capath):
         while True:
             if iosock_try():
                 break
-            
-        global server_subject_alt_names 
+
+        global server_subject_alt_names
         server_subject_alt_names=""
         for i in range(0, server_cert_chain[-1].get_extension_count()):
             extension = server_cert_chain[-1].get_extension(i)
@@ -170,7 +170,7 @@ def main():
         nagios_response.setCode(NagiosResponse.CRITICAL)
         nagios_response.writeCriticalMessage('CRITICAL - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
 
-    except Exception:
+    except Exception as e:
         nagios_response.setCode(NagiosResponse.CRITICAL)
         nagios_response.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
 
