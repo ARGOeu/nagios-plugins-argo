@@ -44,21 +44,21 @@ def main():
                 nagios_response.setCode(NagiosResponse.CRITICAL)
                 nagios_response.writeCriticalMessage('Customer: ' + tenant['name'] + ' - %s - %s' % (utils.METRICS_API, errmsg_from_excp(e)))
 
-            except Exception:
+            except Exception as e:
                 nagios_response.setCode(NagiosResponse.CRITICAL)
-                nagios_response.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
+                nagios_response.writeCriticalMessage('%s' % (errmsg_from_excp(e)))
 
     except requests.exceptions.RequestException as e:
         nagios_response.setCode(NagiosResponse.CRITICAL)
-        nagios_response.writeCriticalMessage('Critical - cannot connect to %s: %s' % ('https://' + arguments.hostname + utils.TENANT_API,
+        nagios_response.writeCriticalMessage('cannot connect to %s: %s' % ('https://' + arguments.hostname + utils.TENANT_API,
                                                     errmsg_from_excp(e)))
     except ValueError as e:
         nagios_response.setCode(NagiosResponse.CRITICAL)
-        nagios_response.writeCriticalMessage('Critical - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
+        nagios_response.writeCriticalMessage('%s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
 
     except Exception as e:
         nagios_response.setCode(NagiosResponse.CRITICAL)
-        nagios_response.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
+        nagios_response.writeCriticalMessage('%s' % (errmsg_from_excp(e)))
 
     print(nagios_response.getMsg())
     raise SystemExit(nagios_response.getCode())

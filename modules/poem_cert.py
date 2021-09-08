@@ -164,16 +164,16 @@ def main():
 
     except requests.exceptions.RequestException as e:
         nagios_response.setCode(NagiosResponse.CRITICAL)
-        nagios_response.writeCriticalMessage('CRITICAL - cannot connect to %s: %s' % ('https://' + utils.MAIN_ADDRESS + utils.TENANT_API,
+        nagios_response.writeCriticalMessage('cannot connect to %s: %s' % ('https://' + utils.MAIN_ADDRESS + utils.TENANT_API,
                                                     errmsg_from_excp(e)))
 
     except ValueError as e:
         nagios_response.setCode(NagiosResponse.CRITICAL)
-        nagios_response.writeCriticalMessage('CRITICAL - %s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
+        nagios_response.writeCriticalMessage('%s - %s' % (utils.TENANT_API, errmsg_from_excp(e)))
 
     except Exception as e:
         nagios_response.setCode(NagiosResponse.CRITICAL)
-        nagios_response.writeCriticalMessage('CRITICAL - %s' % (errmsg_from_excp(e)))
+        nagios_response.writeCriticalMessage('%s' % (errmsg_from_excp(e)))
 
     print(nagios_response.getMsg())
     raise SystemExit(nagios_response.getCode())
