@@ -11,12 +11,13 @@ def main():
     parser.add_argument('-H', dest='hostname', required=True, type=str, help='Super POEM FQDN')
     parser.add_argument('--mandatory-metrics', dest='mandatory_metrics', required=True,
      type=str, nargs='*', help='List of mandatory metrics seperated by space')
+    parser.add_argument('-t', dest='timeout', type=int, default=180)
     arguments = parser.parse_args()
 
     nagios_response = NagiosResponse("All mandatory metrics are present!")
 
     try:
-        tenants = requests.get('https://' + arguments.hostname + utils.TENANT_API).json()
+        tenants = requests.get('https://' + arguments.hostname + utils.TENANT_API, timeout=arguments.timeout).json()
         tenants = utils.remove_name_from_json(tenants, utils.SUPERPOEM)
 
         for tenant in tenants:
@@ -24,7 +25,7 @@ def main():
 
             # Check mandatory metrics
             try:
-                metrics = requests.get('https://' + tenant['domain_url'] + utils.METRICS_API).json()
+                metrics = requests.get('https://' + tenant['domain_url'] + utils.METRICS_API, timeout=arguments.timeout).json()
 
                 missing_metrics = arguments.mandatory_metrics.copy()
                 for metric in metrics:
