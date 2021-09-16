@@ -132,34 +132,42 @@ $ ./web-api -H web-api.test.com --tenant tenantname --rtype ar --token 123213123
 ```
 
 ## POEM Service
-This is a probe for checking if tenant certificates are valid, and if tenants contain mandatory metrics. The probe acutally consists of two probes, probe_cert which checks if the certificates are valid, and probe_metricapi which checks if tenants contain the mandatory metrics.
 
-The usage of the script for poem_cert is:
+Two probes are introduced: 
+* `poem-cert-probe` is checking if TenantPOEM certificates are valid 
+* `poem-metricapi-probe` is checking mandatory metric configurations of TenantPOEMs
+Both probes are pointed to SuperPOEM instance from which they figure out all TenantPOEMs that they inspect further.
+
+Usage of the probe for certificates:
 ```sh
-$ usage: poem_cert.py [-h] [--cert CERT] [--key KEY] [--capath CAPATH]
-                    [-t TIMEOUT]
+$ usage: poem-cert-probe [-h] [--cert CERT] [--key KEY] [--capath CAPATH]
+                    [-t TIMEOUT] -H SuperPOEM.FQDN
 ```
 where:
 
- - (--cert): Path to host certificate
- - (--key): Path to host key
- - (--capath): CAPATH
- - (-t): the timeout
+- (--cert): Path to host certificate
+- (--key): Path to host key
+- (--capath): CAPATH
+- (-t): timeout
+- -H: FQDN of SuperPOEM 
 
-The usage of the script for poem_metricapi is:
+Usage of probe for metric configuration :
 ```sh
-$ usage: poem_metricapi.py [-h]
-                         [--mandatory-metrics [MANMETRICS [MANMETRICS ...]]]
+$ usage: poem-metricapi-probe [-h] [--mandatory-metrics [MANMETRIC1 [MANMETRIC2 ...]]]
+                        [-t TIMEOUT] -H SuperPOEM.FQDN
 ```
 where:
 
- - (--mandatory-metrics): List of mandatory metrics seperated by space
+- (--mandatory-metrics): List of mandatory metrics separated by space
+
 ### Usage examples
-```sh
-$ ./poem_cert --cert /security/certificate.pem --key security/key.pem --capath security/certificates -t 180
 
-$ ./poem_metricapi --mandatory-metrics metric1 metric2 metricN
+```sh
+$ ./poem-cert-probe --cert /etc/grid-security/hostcert.pem --key /etc/grid-security/hostkey.pem --capath /etc/grid-security/certificates -t 180 -H poem.devel.argo.grnet.gr
+
+$ ./poem-metricapi-probe --mandatory-metrics argo.AMSPublisher-Check org.nagios.AmsDirSize org.nagios.NagiosCmdFile org.nagios.ProcessCrond
 ```
+
 ## Compute Engine dataflow
 
 This is a probe for checking the compute engine's dataflow, making sure that all components work as intented.
