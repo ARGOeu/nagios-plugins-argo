@@ -131,6 +131,35 @@ where:
 $ ./web-api -H web-api.test.com --tenant tenantname --rtype ar --token 12321312313123 --unused-reports  Report1 Report2  --day 1 -t 180 -v
 ```
 
+## POEM Service
+This is a probe for checking if tenant certificates are valid, and if tenants contain mandatory metrics. The probe acutally consists of two probes, probe_cert which checks if the certificates are valid, and probe_metricapi which checks if tenants contain the mandatory metrics.
+
+The usage of the script for poem_cert is:
+```sh
+$ usage: poem_cert.py [-h] [--cert CERT] [--key KEY] [--capath CAPATH]
+                    [-t TIMEOUT]
+```
+where:
+
+ - (--cert): Path to host certificate
+ - (--key): Path to host key
+ - (--capath): CAPATH
+ - (-t): the timeout
+
+The usage of the script for poem_metricapi is:
+```sh
+$ usage: poem_metricapi.py [-h]
+                         [--mandatory-metrics [MANMETRICS [MANMETRICS ...]]]
+```
+where:
+
+ - (--mandatory-metrics): List of mandatory metrics seperated by space
+### Usage examples
+```sh
+$ ./poem_cert --cert /security/certificate.pem --key security/key.pem --capath security/certificates -t 180
+
+$ ./poem_metricapi --mandatory-metrics metric1 metric2 metricN
+```
 ## Compute Engine dataflow
 
 This is a probe for checking the compute engine's dataflow, making sure that all components work as intented.
