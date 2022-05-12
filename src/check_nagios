@@ -126,6 +126,12 @@ $plugin->add_arg(
     required => 0
 );
 $plugin->add_arg(
+    spec => 'realm=s',
+    help => "realm\n   Realm used for authentication.\n",
+    required => 0,
+    default => 'Nagios API'
+);
+$plugin->add_arg(
     spec => 'nagios-host=s',
     help => "--nagios-host=hostname\n   Hostname on remote nagios to check.\n",
     required => 0
@@ -176,11 +182,11 @@ alarm($plugin->opts->timeout);
 
 if ( $plugin->opts->cert && $plugin->opts->key ) {
     $ua = LWP::UserAgent->new(ssl_opts => { SSL_key_file => $plugin->opts->key, SSL_cert_file => $plugin->opts->cert });
-} elsif ( $plugin->opts->username && $plugin->opts->password ) {
-    $ua = LWP::UserAgent->new();
-    $ua->credentials("$nagios:443", 'Nagios API', $plugin->opts->username, $plugin->opts->password);
 } else {
     $ua = LWP::UserAgent->new();
+}
+if ( $plugin->opts->username && $plugin->opts->password ) {
+    $ua->credentials("$nagios:443", $plugin->opts->realm, $plugin->opts->username, $plugin->opts->password);
 }
 $ua->agent("check_nagios");
 
