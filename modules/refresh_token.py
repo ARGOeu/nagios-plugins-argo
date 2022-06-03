@@ -24,7 +24,7 @@ def main():
         help="The identifier of the client"
     )
     parser.add_argument(
-        "--client_secret", dest="client_secret", type=str,
+        "--client_secret", dest="client_secret", type=str, required=True,
         help="The secret value of the client"
     )
     parser.add_argument(
@@ -45,32 +45,18 @@ def main():
     nagios = NagiosResponse("Access token fetched successfully.")
 
     try:
-        if args.client_secret:
-            response = requests.post(
-                args.url,
-                auth=(args.client_id, args.client_secret),
-                data={
-                    "client_id": args.client_id,
-                    "client_secret": args.client_secret,
-                    "grant_type": "refresh_token",
-                    "refresh_token": args.refresh_token,
-                    "scope": "openid email profile eduperson_entitlement"
-                },
-                timeout=args.timeout
-            )
-
-        else:
-            response = requests.post(
-                args.url,
-                data={
-                    "client_id": args.client_id,
-                    "grant_type": "refresh_token",
-                    "refresh_token": args.refresh_token,
-                    "scope": "openid email profile eduperson_entitlement"
-                },
-                timeout=args.timeout
-            )
-
+        response = requests.post(
+            args.url,
+            auth=(args.client_id, args.client_secret),
+            data={
+                "client_id": args.client_id,
+                "client_secret": args.client_secret,
+                "grant_type": "refresh_token",
+                "refresh_token": args.refresh_token,
+                "scope": "openid email profile eduperson_entitlement"
+            },
+            timeout=args.timeout
+        )
         response.raise_for_status()
 
         access_token = response.json()["access_token"]
